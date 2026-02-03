@@ -1,82 +1,174 @@
 import 'package:flutter/material.dart';
 
+import '../models/lotto_result.dart';
 import '../providers/user_provider.dart';
+import '../screens/compare_screen.dart';
+import '../screens/dream_screen.dart';
 import '../screens/premium_screen.dart';
 import '../services/ad_service.dart';
+import '../services/lotto_api.dart';
+import '../services/notification_service.dart';
+import '../widgets/lotto_widgets.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final LottoApi _lottoApi = LottoApi();
+  List<LottoResult> _results = [];
+  DateTime? _lastUpdated;
+  bool _loading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      final results = await _lottoApi.fetchRecentResults(count: 10);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _results = results;
+        _lastUpdated = DateTime.now();
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = '데이터를 불러오지 못했어요.';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: _HeroHeader(
-              onRefresh: () {},
-            ),
-          ),
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: _PremiumCTA(),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  _SectionTitle(
-                    title: '최근 10회차 당첨 번호',
-                    subtitle: '동행복권 API 기반 데이터',
+    return Stack(
+      children: [
+        const _LuxeBackground(),
+        SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadData,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _HeroHeader(
+                    onRefresh: _loadData,
+                    isLoading: _loading,
+                    lastUpdated: _lastUpdated,
+                    nextDrawTime: NotificationService.instance.nextDrawTime(),
                   ),
-                  SizedBox(height: 12),
-                  _RecentRoundsList(),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  _SectionTitle(
-                    title: '번호별 출현 빈도',
-                    subtitle: '최근 10회차 기준',
+                ),
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: _PremiumCTA(),
                   ),
-                  SizedBox(height: 12),
-                  _FrequencyGrid(),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  _SectionTitle(
-                    title: '빈도 기반 추천 번호',
-                    subtitle: '출현 빈도 상위 조합',
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: _QuickActions(),
                   ),
-                  SizedBox(height: 12),
-                  _RecommendationCard(),
-                ],
-              ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionTitle(
+                          title: '최근 10회차 당첨 번호',
+                          subtitle: '동행복권 API 기반 데이터',
+                        ),
+                        const SizedBox(height: 12),
+                        _RecentRoundsList(
+                          results: _results,
+                          isLoading: _loading,
+                          errorMessage: _errorMessage,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionTitle(
+                          title: '번호별 출현 빈도',
+                          subtitle: '최근 10회차 기준',
+                        ),
+                        const SizedBox(height: 12),
+                        _FrequencyGrid(results: _results),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionTitle(
+                          title: '빈도 기반 추천 번호',
+                          subtitle: '출현 빈도 상위 조합',
+                        ),
+                        const SizedBox(height: 12),
+                        _RecommendationCard(results: _results),
+                      ],
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(
+                  child: PremiumAwareBanner(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SliverToBoxAdapter(
-            child: PremiumAwareBanner(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
-            ),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LuxeBackground extends StatelessWidget {
+  const _LuxeBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            scheme.background,
+            scheme.primary.withOpacity(0.16),
+            scheme.secondary.withOpacity(0.18),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
     );
   }
@@ -106,16 +198,11 @@ class _PremiumActiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6EE),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD1E4CC)),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return GlassCard(
       child: Row(
         children: [
-          const Icon(Icons.verified_rounded, color: Color(0xFF2E7D32)),
+          Icon(Icons.verified_rounded, color: scheme.secondary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -142,29 +229,18 @@ class _PremiumUpsellCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return GlassCard(
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFF4EFE6),
+              color: scheme.primaryContainer,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.star_rounded, color: Color(0xFF1A4F7A)),
+            child: Icon(Icons.star_rounded, color: scheme.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -181,7 +257,7 @@ class _PremiumUpsellCard extends StatelessWidget {
                 Text(
                   '광고 제거와 심화 리포트를 확인하세요.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.black54,
+                        color: scheme.onSurface.withOpacity(0.65),
                       ),
                 ),
               ],
@@ -199,9 +275,26 @@ class _PremiumUpsellCard extends StatelessWidget {
 }
 
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.onRefresh});
+  const _HeroHeader({
+    required this.onRefresh,
+    required this.isLoading,
+    required this.lastUpdated,
+    required this.nextDrawTime,
+  });
 
   final VoidCallback onRefresh;
+  final bool isLoading;
+  final DateTime? lastUpdated;
+  final DateTime nextDrawTime;
+
+  String _formatDateTime(DateTime time) {
+    final year = time.year.toString().padLeft(4, '0');
+    final month = time.month.toString().padLeft(2, '0');
+    final day = time.day.toString().padLeft(2, '0');
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$year-$month-$day $hour:$minute';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -212,8 +305,8 @@ class _HeroHeader extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colorScheme.primary.withOpacity(0.9),
-            colorScheme.primary.withOpacity(0.65),
+            colorScheme.primary.withOpacity(0.95),
+            colorScheme.secondary.withOpacity(0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -221,8 +314,8 @@ class _HeroHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 24,
+            color: colorScheme.primary.withOpacity(0.3),
+            blurRadius: 26,
             offset: const Offset(0, 14),
           ),
         ],
@@ -230,29 +323,35 @@ class _HeroHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Lotto Master',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Lotto Master',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: colorScheme.onPrimary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+              ),
+              _LiveBadge(isLoading: isLoading),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            '과거 당첨 데이터를 불러와 분석합니다.',
+            '당첨 데이터를 실시간으로 갱신합니다.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
+                  color: colorScheme.onPrimary.withOpacity(0.9),
                 ),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              _InfoChip(label: 'API 연결 준비'),
-              const SizedBox(width: 8),
-              _InfoChip(label: '최근 10회차'),
-              const SizedBox(width: 8),
-              _InfoChip(label: '빈도 분석'),
+              _InfoChip(label: '마지막 업데이트: ${lastUpdated == null ? '-' : _formatDateTime(lastUpdated!)}'),
+              _InfoChip(label: '다음 알림: ${_formatDateTime(nextDrawTime)}'),
+              const _InfoChip(label: '최근 10회차'),
             ],
           ),
           const SizedBox(height: 20),
@@ -271,7 +370,143 @@ class _HeroHeader extends StatelessWidget {
               label: const Text('데이터 새로고침'),
             ),
           ),
+          if (isLoading) ...[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              color: colorScheme.onPrimary,
+              backgroundColor: colorScheme.onPrimary.withOpacity(0.2),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _LiveBadge extends StatelessWidget {
+  const _LiveBadge({required this.isLoading});
+
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: isLoading ? colorScheme.secondary : Colors.greenAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isLoading ? '로딩 중' : 'LIVE',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionCard(
+            title: '당첨 비교',
+            subtitle: '내 티켓과 결과 매칭',
+            icon: Icons.compare_arrows_rounded,
+            onTap: () => Navigator.pushNamed(context, CompareScreen.routeName),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _ActionCard(
+            title: '꿈 해몽',
+            subtitle: '키워드별 행운 번호',
+            icon: Icons.auto_stories_rounded,
+            onTap: () => Navigator.pushNamed(context, DreamScreen.routeName),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: scheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withOpacity(0.65),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -310,6 +545,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -323,7 +559,7 @@ class _SectionTitle extends StatelessWidget {
         Text(
           subtitle,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.black54,
+                color: scheme.onSurface.withOpacity(0.65),
               ),
         ),
       ],
@@ -332,22 +568,31 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _RecentRoundsList extends StatelessWidget {
-  const _RecentRoundsList();
+  const _RecentRoundsList({
+    required this.results,
+    required this.isLoading,
+    required this.errorMessage,
+  });
+
+  final List<LottoResult> results;
+  final bool isLoading;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
-    final rounds = List.generate(10, (index) {
-      final roundNumber = 1120 - index;
-      return _RoundResult(
-        round: roundNumber,
-        date: '2026-02-${3 - index}'.padLeft(10, '0'),
-        numbers: [5, 11, 20, 23, 32, 41],
-        bonus: 7,
+    if (isLoading && results.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (errorMessage != null) {
+      return GlassCard(
+        child: Text(
+          errorMessage!,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       );
-    });
-
+    }
     return Column(
-      children: rounds
+      children: results
           .map(
             (round) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -359,40 +604,15 @@ class _RecentRoundsList extends StatelessWidget {
   }
 }
 
-class _RoundResult {
-  const _RoundResult({
-    required this.round,
-    required this.date,
-    required this.numbers,
-    required this.bonus,
-  });
-
-  final int round;
-  final String date;
-  final List<int> numbers;
-  final int bonus;
-}
-
 class _RoundCard extends StatelessWidget {
   const _RoundCard({required this.result});
 
-  final _RoundResult result;
+  final LottoResult result;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -400,15 +620,15 @@ class _RoundCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${result.round}회차',
+                '${result.drawNo}회차',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                result.date,
+                result.drawDate,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.black54,
+                      color: scheme.onSurface.withOpacity(0.6),
                     ),
               ),
             ],
@@ -418,10 +638,18 @@ class _RoundCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              ...result.numbers.map(
-                (number) => _NumberBall(number: number, isBonus: false),
+              ...result.numbers.asMap().entries.map(
+                    (entry) => NumberBall(
+                      number: entry.value,
+                      isBonus: false,
+                      delay: Duration(milliseconds: 80 * entry.key),
+                    ),
+                  ),
+              NumberBall(
+                number: result.bonus,
+                isBonus: true,
+                delay: const Duration(milliseconds: 520),
               ),
-              _NumberBall(number: result.bonus, isBonus: true),
             ],
           ),
         ],
@@ -430,56 +658,31 @@ class _RoundCard extends StatelessWidget {
   }
 }
 
-class _NumberBall extends StatelessWidget {
-  const _NumberBall({required this.number, required this.isBonus});
-
-  final int number;
-  final bool isBonus;
-
-  @override
-  Widget build(BuildContext context) {
-    final baseColor = isBonus ? const Color(0xFFE97C40) : const Color(0xFF1A4F7A);
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: baseColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: baseColor.withOpacity(0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        number.toString(),
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-    );
-  }
-}
-
 class _FrequencyGrid extends StatelessWidget {
-  const _FrequencyGrid();
+  const _FrequencyGrid({required this.results});
+
+  final List<LottoResult> results;
+
+  Map<int, int> _buildFrequency() {
+    final counts = <int, int>{};
+    for (final result in results) {
+      for (final number in result.numbers) {
+        counts[number] = (counts[number] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final counts = _buildFrequency();
     final items = List.generate(12, (index) {
-      return _FrequencyItem(number: index + 1, count: 4 + (index % 5));
+      final number = index + 1;
+      return _FrequencyItem(number: number, count: counts[number] ?? 0);
     });
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -513,12 +716,13 @@ class _FrequencyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4EFE6),
+        color: scheme.primaryContainer.withOpacity(0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D6C6)),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -532,7 +736,7 @@ class _FrequencyChip extends StatelessWidget {
           Text(
             '${item.count}회',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.black54,
+                  color: scheme.onSurface.withOpacity(0.6),
                 ),
           ),
         ],
@@ -542,23 +746,28 @@ class _FrequencyChip extends StatelessWidget {
 }
 
 class _RecommendationCard extends StatelessWidget {
-  const _RecommendationCard();
+  const _RecommendationCard({required this.results});
+
+  final List<LottoResult> results;
+
+  List<int> _recommendNumbers() {
+    final counts = <int, int>{};
+    for (final result in results) {
+      for (final number in result.numbers) {
+        counts[number] = (counts[number] ?? 0) + 1;
+      }
+    }
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(6).map((entry) => entry.key).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final scheme = Theme.of(context).colorScheme;
+    final recommended = results.isEmpty ? [3, 9, 17, 24, 33, 41] : _recommendNumbers();
+    return GlassCard(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -572,20 +781,23 @@ class _RecommendationCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: const [
-              _NumberBall(number: 3, isBonus: false),
-              _NumberBall(number: 9, isBonus: false),
-              _NumberBall(number: 17, isBonus: false),
-              _NumberBall(number: 24, isBonus: false),
-              _NumberBall(number: 33, isBonus: false),
-              _NumberBall(number: 41, isBonus: false),
-            ],
+            children: recommended
+                .asMap()
+                .entries
+                .map(
+                  (entry) => NumberBall(
+                    number: entry.value,
+                    isBonus: false,
+                    delay: Duration(milliseconds: 80 * entry.key),
+                  ),
+                )
+                .toList(),
           ),
           const SizedBox(height: 16),
           Text(
             '추천 기준: 최근 10회차 빈도 상위 번호 중 균형 분포',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.black54,
+                  color: scheme.onSurface.withOpacity(0.6),
                 ),
           ),
         ],
