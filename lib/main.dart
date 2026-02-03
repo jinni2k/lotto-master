@@ -4,8 +4,10 @@ import 'providers/user_provider.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/my_tickets_screen.dart';
 import 'screens/premium_screen.dart';
 import 'screens/recommend_screen.dart';
+import 'screens/scan_screen.dart';
 import 'services/ad_service.dart';
 import 'services/purchase_service.dart';
 
@@ -55,6 +57,8 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
 
   static const List<Widget> _screens = [
     HomeScreen(),
+    ScanScreen(),
+    MyTicketsScreen(),
     HistoryScreen(),
     AnalysisScreen(),
     RecommendScreen(),
@@ -78,6 +82,14 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
           NavigationDestination(
             icon: Icon(Icons.home_rounded),
             label: '홈',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.document_scanner_rounded),
+            label: '스캔',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.confirmation_number_rounded),
+            label: '내 티켓',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),
