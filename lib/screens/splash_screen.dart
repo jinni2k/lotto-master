@@ -119,6 +119,8 @@ class _SplashScreenState extends State<SplashScreen> {
                               number: 7,
                             ),
                             const SizedBox(height: 18),
+                            const _RollingLottoTrack(),
+                            const SizedBox(height: 16),
                             Text(
                               'Fortune. Precision. Luxury.',
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -197,6 +199,87 @@ class _GlowOrb extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(colors: colors),
+      ),
+    );
+  }
+}
+
+class _RollingLottoTrack extends StatefulWidget {
+  const _RollingLottoTrack();
+
+  @override
+  State<_RollingLottoTrack> createState() => _RollingLottoTrackState();
+}
+
+class _RollingLottoTrackState extends State<_RollingLottoTrack>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+    _progress = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 72,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final ballSize = 54.0;
+          final travel = (constraints.maxWidth - ballSize).clamp(0.0, double.infinity);
+          return Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 34,
+                child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: LinearGradient(
+                      colors: [
+                        scheme.primary.withOpacity(0.1),
+                        scheme.primary.withOpacity(0.45),
+                        scheme.secondary.withOpacity(0.25),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _progress,
+                builder: (context, child) {
+                  final dx = travel * _progress.value;
+                  return Transform.translate(
+                    offset: Offset(dx, 0),
+                    child: child,
+                  );
+                },
+                child: const AnimatedLottoBall(
+                  size: 54,
+                  number: 24,
+                  animate: true,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

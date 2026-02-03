@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/lotto_palette.dart';
+
 class AnimatedLottoBall extends StatefulWidget {
   const AnimatedLottoBall({
     super.key,
@@ -58,7 +60,10 @@ class _AnimatedLottoBallState extends State<AnimatedLottoBall>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final glow = widget.glowColor ?? scheme.primary;
+    final glow = widget.glowColor ??
+        (widget.number == null
+            ? scheme.primary
+            : lottoBallGlowColor(widget.number!));
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -98,6 +103,13 @@ class _LottoBallFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final gradientColors = number == null
+        ? [
+            scheme.secondary.withOpacity(0.95),
+            scheme.primary.withOpacity(0.95),
+            const Color(0xFF2A210F),
+          ]
+        : lottoBallGradient(number!);
     return Container(
       width: size,
       height: size,
@@ -106,11 +118,7 @@ class _LottoBallFace extends StatelessWidget {
         gradient: RadialGradient(
           center: const Alignment(-0.2, -0.3),
           radius: 0.9,
-          colors: [
-            scheme.secondary.withOpacity(0.95),
-            scheme.primary.withOpacity(0.95),
-            const Color(0xFF2A210F),
-          ],
+          colors: gradientColors,
         ),
         boxShadow: [
           BoxShadow(

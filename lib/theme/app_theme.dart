@@ -19,10 +19,10 @@ class AppTheme {
       onPrimary: _ink,
       secondary: _goldSoft,
       onSecondary: _ink,
-      surface: isDark ? _inkSoft : const Color(0xFFF6F0E4),
-      onSurface: isDark ? _ivory : const Color(0xFF221E18),
-      background: isDark ? _ink : const Color(0xFFF7F2EA),
-      onBackground: isDark ? _ivory : const Color(0xFF221E18),
+      surface: isDark ? const Color(0xFF141219) : const Color(0xFFF6F0E4),
+      onSurface: isDark ? const Color(0xFFF5EEE2) : const Color(0xFF221E18),
+      background: isDark ? const Color(0xFF0A0A0C) : const Color(0xFFF7F2EA),
+      onBackground: isDark ? const Color(0xFFF5EEE2) : const Color(0xFF221E18),
       error: const Color(0xFFEF5350),
       onError: Colors.white,
       primaryContainer: isDark ? const Color(0xFF3A2C12) : const Color(0xFFFFE7B3),
@@ -68,6 +68,7 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.background,
+      splashFactory: InkRipple.splashFactory,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -102,16 +103,61 @@ class AppTheme {
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          shadowColor: _goldDeep.withOpacity(0.4),
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+        style: ButtonStyle(
+          backgroundColor: WidgetStatePropertyAll(colorScheme.primary),
+          foregroundColor: WidgetStatePropertyAll(colorScheme.onPrimary),
+          shadowColor: WidgetStatePropertyAll(_goldDeep.withOpacity(0.45)),
+          elevation: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return 2;
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return 10;
+            }
+            return 8;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.onPrimary.withOpacity(0.15);
+            }
+            return null;
+          }),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: textTheme.titleMedium,
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+          textStyle: WidgetStatePropertyAll(textTheme.titleMedium),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.primary.withOpacity(0.18);
+            }
+            return null;
+          }),
+          foregroundColor: WidgetStatePropertyAll(colorScheme.primary),
+          textStyle: WidgetStatePropertyAll(textTheme.titleSmall),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.primary.withOpacity(0.12);
+            }
+            return null;
+          }),
+          foregroundColor: WidgetStatePropertyAll(colorScheme.primary),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colorScheme.primary.withOpacity(0.6)),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

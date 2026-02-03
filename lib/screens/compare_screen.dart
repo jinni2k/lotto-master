@@ -1,6 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../models/lotto_result.dart';
 import '../models/my_ticket.dart';
@@ -83,7 +84,7 @@ class _CompareScreenState extends State<CompareScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (_loading)
-                  const Center(child: CircularProgressIndicator())
+                  const _CompareSkeleton()
                 else if (_errorMessage != null)
                   GlassCard(child: Text(_errorMessage!))
                 else if (_latestResult == null)
@@ -179,6 +180,57 @@ class _Header extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _CompareSkeleton extends StatelessWidget {
+  const _CompareSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Shimmer.fromColors(
+      baseColor: scheme.surface.withOpacity(0.55),
+      highlightColor: scheme.onSurface.withOpacity(0.08),
+      child: GlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 16,
+              width: 140,
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: List.generate(6, (index) {
+                return Container(
+                  width: 34,
+                  height: 34,
+                  margin: EdgeInsets.only(right: index == 5 ? 0 : 8),
+                  decoration: BoxDecoration(
+                    color: scheme.onSurface.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 12,
+              width: 180,
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

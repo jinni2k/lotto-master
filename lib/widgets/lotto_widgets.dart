@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../theme/lotto_palette.dart';
+
 class SectionTitle extends StatelessWidget {
   const SectionTitle({super.key, required this.title, required this.subtitle});
 
@@ -88,7 +90,8 @@ class _NumberBallState extends State<NumberBall>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final baseColor = widget.isBonus ? scheme.secondary : scheme.primary;
+    final baseColor = lottoBallBaseColor(widget.number);
+    final glowColor = widget.isBonus ? lottoBallGlowColor(widget.number) : baseColor;
     return FadeTransition(
       opacity: _fade,
       child: AnimatedBuilder(
@@ -108,10 +111,13 @@ class _NumberBallState extends State<NumberBall>
           decoration: BoxDecoration(
             color: baseColor,
             shape: BoxShape.circle,
+            border: widget.isBonus
+                ? Border.all(color: Colors.white.withOpacity(0.65), width: 1.1)
+                : null,
             boxShadow: [
               BoxShadow(
-                color: baseColor.withOpacity(0.25),
-                blurRadius: 10,
+                color: glowColor.withOpacity(0.35),
+                blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -147,6 +153,7 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
@@ -154,22 +161,28 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: (tintColor ?? scheme.surface).withOpacity(0.55),
+            color: (tintColor ?? scheme.surface).withOpacity(isDark ? 0.7 : 0.55),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(color: scheme.primary.withOpacity(0.25)),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                (tintColor ?? scheme.surface).withOpacity(0.75),
-                scheme.surface.withOpacity(0.35),
+                (tintColor ?? scheme.surface).withOpacity(isDark ? 0.85 : 0.75),
+                scheme.surface.withOpacity(isDark ? 0.45 : 0.35),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: scheme.primary.withOpacity(0.18),
-                blurRadius: 24,
-                spreadRadius: 1,
+                color: scheme.primary.withOpacity(isDark ? 0.2 : 0.22),
+                blurRadius: 30,
+                spreadRadius: 2,
+                offset: const Offset(0, 14),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.35 : 0.12),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
               ),
             ],
           ),

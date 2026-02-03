@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../models/lotto_result.dart';
 import '../providers/user_provider.dart';
@@ -391,24 +392,38 @@ class _HeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerGradient = LinearGradient(
+      colors: isDark
+          ? const [
+              Color(0xFF5F4614),
+              Color(0xFFB07A1C),
+              Color(0xFFD8B24C),
+            ]
+          : const [
+              Color(0xFFF7E2A6),
+              Color(0xFFD8B24C),
+              Color(0xFFB07A1C),
+            ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primary.withOpacity(0.95),
-            colorScheme.secondary.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: headerGradient,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.primary.withOpacity(0.3),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
+            color: const Color(0xFF5B3F10).withOpacity(isDark ? 0.5 : 0.35),
+            blurRadius: 32,
+            offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -451,11 +466,23 @@ class _HeroHeader extends StatelessWidget {
             height: 44,
             child: ElevatedButton.icon(
               onPressed: onRefresh,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              style: ButtonStyle(
+                backgroundColor: const WidgetStatePropertyAll(Colors.white),
+                foregroundColor: WidgetStatePropertyAll(colorScheme.primary),
+                elevation: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.pressed)) {
+                    return 1;
+                  }
+                  return 6;
+                }),
+                overlayColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.pressed)) {
+                    return colorScheme.primary.withOpacity(0.15);
+                  }
+                  return null;
+                }),
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
               icon: const Icon(Icons.refresh),
@@ -869,7 +896,7 @@ class _RecentRoundsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && results.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _RecentRoundsSkeleton();
     }
     if (errorMessage != null) {
       return GlassCard(
@@ -888,6 +915,57 @@ class _RecentRoundsList extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _RecentRoundsSkeleton extends StatelessWidget {
+  const _RecentRoundsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = scheme.surface.withOpacity(0.55);
+    final highlightColor = scheme.onSurface.withOpacity(0.08);
+    return Shimmer.fromColors(
+      baseColor: baseColor,
+      highlightColor: highlightColor,
+      child: Column(
+        children: List.generate(4, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 14,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: scheme.onSurface.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: List.generate(6, (chip) {
+                      return Container(
+                        width: 34,
+                        height: 34,
+                        margin: EdgeInsets.only(right: chip == 5 ? 0 : 8),
+                        decoration: BoxDecoration(
+                          color: scheme.onSurface.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
