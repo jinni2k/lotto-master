@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 
+import 'providers/user_provider.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/premium_screen.dart';
 import 'screens/recommend_screen.dart';
+import 'services/ad_service.dart';
+import 'services/purchase_service.dart';
 
-void main() {
-  runApp(const LottoMasterApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final userProvider = UserProvider();
+  await AdService.instance.initialize();
+  await PurchaseService.instance.initialize(userProvider);
+  runApp(
+    UserProviderScope(
+      notifier: userProvider,
+      child: const LottoMasterApp(),
+    ),
+  );
 }
 
 class LottoMasterApp extends StatelessWidget {
@@ -22,6 +35,9 @@ class LottoMasterApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF5F1E8),
       ),
+      routes: {
+        PremiumScreen.routeName: (_) => const PremiumScreen(),
+      },
       home: const LottoHomeShell(),
     );
   }

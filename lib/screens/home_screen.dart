@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../providers/user_provider.dart';
+import '../screens/premium_screen.dart';
+import '../services/ad_service.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -11,6 +15,12 @@ class HomeScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: _HeroHeader(
               onRefresh: () {},
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: _PremiumCTA(),
             ),
           ),
           SliverToBoxAdapter(
@@ -60,6 +70,127 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const SliverToBoxAdapter(
+            child: PremiumAwareBanner(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumCTA extends StatelessWidget {
+  const _PremiumCTA();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = UserProviderScope.of(context);
+    if (user.isPremium) {
+      return _PremiumActiveCard(onPressed: () {
+        Navigator.pushNamed(context, PremiumScreen.routeName);
+      });
+    }
+    return _PremiumUpsellCard(onPressed: () {
+      Navigator.pushNamed(context, PremiumScreen.routeName);
+    });
+  }
+}
+
+class _PremiumActiveCard extends StatelessWidget {
+  const _PremiumActiveCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6EE),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFD1E4CC)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified_rounded, color: Color(0xFF2E7D32)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '프리미엄 이용 중',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: onPressed,
+            child: const Text('관리'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumUpsellCard extends StatelessWidget {
+  const _PremiumUpsellCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4EFE6),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.star_rounded, color: Color(0xFF1A4F7A)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '프리미엄으로 업그레이드',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '광고 제거와 심화 리포트를 확인하세요.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.black54,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: onPressed,
+            child: const Text('보기'),
           ),
         ],
       ),

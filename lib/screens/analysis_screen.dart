@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/lotto_result.dart';
+import '../providers/user_provider.dart';
+import '../screens/premium_screen.dart';
+import '../services/ad_service.dart';
 import '../services/lotto_api.dart';
 import '../widgets/lotto_widgets.dart';
 
@@ -45,6 +48,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
           final results = snapshot.data ?? [];
           final items = _buildFrequencyItems(results);
 
+          final isPremium = UserProviderScope.of(context).isPremium;
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -77,6 +81,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     },
                   ),
                 ),
+                const SizedBox(height: 16),
+                if (isPremium)
+                  const _PremiumInsightCard()
+                else
+                  const _PremiumLockedCard(),
+                const SizedBox(height: 16),
+                const PremiumAwareBanner(),
               ],
             ),
           );
@@ -166,6 +177,124 @@ class _ErrorState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PremiumLockedCard extends StatelessWidget {
+  const _PremiumLockedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lock_rounded, color: Color(0xFF1A4F7A)),
+              const SizedBox(width: 8),
+              Text(
+                '프리미엄 심화 분석',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '번호 분산도, 구간별 편향, 패턴 리포트를 확인하세요.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black54,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, PremiumScreen.routeName);
+              },
+              child: const Text('프리미엄 보기'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumInsightCard extends StatelessWidget {
+  const _PremiumInsightCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '프리미엄 심화 분석',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 12),
+          _InsightRow(label: '번호 분산도', value: '균형 82%'),
+          _InsightRow(label: '구간 편향', value: '20-30 구간 집중'),
+          _InsightRow(label: '짝/홀 분포', value: '짝수 3 / 홀수 3'),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightRow extends StatelessWidget {
+  const _InsightRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.black54,
+                  ),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }

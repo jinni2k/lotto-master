@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/lotto_result.dart';
+import '../providers/user_provider.dart';
+import '../screens/premium_screen.dart';
+import '../services/ad_service.dart';
 import '../services/lotto_api.dart';
 
 class RecommendScreen extends StatefulWidget {
@@ -45,6 +48,7 @@ class _RecommendScreenState extends State<RecommendScreen> {
           final frequency = _buildFrequency(results);
           final recommendation = _buildRecommendation(frequency);
 
+          final isPremium = UserProviderScope.of(context).isPremium;
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -56,6 +60,13 @@ class _RecommendScreenState extends State<RecommendScreen> {
                 _RecommendationCard(numbers: recommendation),
                 const SizedBox(height: 16),
                 _FrequencyHint(frequency: frequency),
+                const SizedBox(height: 16),
+                if (isPremium)
+                  _PremiumRecommendation(numbers: recommendation)
+                else
+                  const _PremiumLockedCard(),
+                const SizedBox(height: 16),
+                const PremiumAwareBanner(),
               ],
             ),
           );
@@ -348,6 +359,106 @@ class _ErrorState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PremiumLockedCard extends StatelessWidget {
+  const _PremiumLockedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lock_rounded, color: Color(0xFF1A4F7A)),
+              const SizedBox(width: 8),
+              Text(
+                '프리미엄 추천',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '고급 모델 기반 추천 조합과 검증 지표를 제공합니다.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black54,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, PremiumScreen.routeName);
+              },
+              child: const Text('프리미엄 보기'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumRecommendation extends StatelessWidget {
+  const _PremiumRecommendation({required this.numbers});
+
+  final List<int> numbers;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '프리미엄 추천 조합',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: numbers
+                .reversed
+                .map((number) => _NumberBall(number: number))
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '추가 검증: 최근 30회차 구간 편향 최소화',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black54,
+                ),
+          ),
+        ],
       ),
     );
   }
