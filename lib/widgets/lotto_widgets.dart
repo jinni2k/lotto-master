@@ -23,7 +23,7 @@ class SectionTitle extends StatelessWidget {
         Text(
           subtitle,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
               ),
         ),
       ],
@@ -87,7 +87,8 @@ class _NumberBallState extends State<NumberBall>
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = widget.isBonus ? const Color(0xFFE97C40) : const Color(0xFF1A4F7A);
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = widget.isBonus ? scheme.secondary : scheme.primary;
     return FadeTransition(
       opacity: _fade,
       child: AnimatedBuilder(
@@ -149,13 +150,28 @@ class GlassCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: (tintColor ?? scheme.surface).withOpacity(0.6),
+            color: (tintColor ?? scheme.surface).withOpacity(0.55),
             borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: scheme.outlineVariant.withOpacity(0.5)),
+            border: Border.all(color: scheme.primary.withOpacity(0.25)),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                (tintColor ?? scheme.surface).withOpacity(0.75),
+                scheme.surface.withOpacity(0.35),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: scheme.primary.withOpacity(0.18),
+                blurRadius: 24,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: child,
         ),

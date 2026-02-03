@@ -20,9 +20,11 @@ import 'screens/recommend_screen.dart';
 import 'screens/currency_screen.dart';
 import 'screens/simulation_screen.dart';
 import 'screens/scan_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/ad_service.dart';
 import 'services/notification_service.dart';
 import 'services/purchase_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +48,11 @@ class LottoMasterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Lotto Master',
-      theme: _buildTheme(Brightness.light),
-      darkTheme: _buildTheme(Brightness.dark),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
       routes: {
+        '/home': (_) => const LottoHomeShell(),
         PremiumScreen.routeName: (_) => const PremiumScreen(),
         CompareScreen.routeName: (_) => const CompareScreen(),
         DreamScreen.routeName: (_) => const DreamScreen(),
@@ -60,69 +63,9 @@ class LottoMasterApp extends StatelessWidget {
         SimulationScreen.routeName: (_) => const SimulationScreen(),
         LuckyStoreScreen.routeName: (_) => const LuckyStoreScreen(),
       },
-      home: const LottoHomeShell(),
+      home: const SplashScreen(),
     );
   }
-}
-
-ThemeData _buildTheme(Brightness brightness) {
-  final isDark = brightness == Brightness.dark;
-  final colorScheme = ColorScheme(
-    brightness: brightness,
-    primary: isDark ? const Color(0xFF8AC7FF) : const Color(0xFF1C6FB7),
-    onPrimary: isDark ? const Color(0xFF0A1B2A) : Colors.white,
-    secondary: isDark ? const Color(0xFFFFC97A) : const Color(0xFFE97C40),
-    onSecondary: isDark ? const Color(0xFF2B1A0B) : Colors.white,
-    surface: isDark ? const Color(0xFF121923) : const Color(0xFFF6F2EC),
-    onSurface: isDark ? const Color(0xFFE6ECF1) : const Color(0xFF1F2A34),
-    background: isDark ? const Color(0xFF0D121A) : const Color(0xFFF2EEE7),
-    onBackground: isDark ? const Color(0xFFE6ECF1) : const Color(0xFF1F2A34),
-    error: const Color(0xFFEF5350),
-    onError: Colors.white,
-    primaryContainer:
-        isDark ? const Color(0xFF15324A) : const Color(0xFFD3E8FF),
-    onPrimaryContainer:
-        isDark ? const Color(0xFFD6E9FF) : const Color(0xFF0D2D47),
-    secondaryContainer:
-        isDark ? const Color(0xFF3B2A15) : const Color(0xFFFFE1C2),
-    onSecondaryContainer:
-        isDark ? const Color(0xFFFFE6C7) : const Color(0xFF3B220F),
-    outline: isDark ? const Color(0xFF2A3A4A) : const Color(0xFFD4C8BB),
-    outlineVariant: isDark ? const Color(0xFF2A3A4A) : const Color(0xFFE2D7CB),
-  );
-
-  return ThemeData(
-    useMaterial3: true,
-    brightness: brightness,
-    colorScheme: colorScheme,
-    fontFamily: 'Georgia',
-    scaffoldBackgroundColor: colorScheme.background,
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: colorScheme.surface.withOpacity(0.9),
-      indicatorColor: colorScheme.primaryContainer,
-      labelTextStyle: WidgetStatePropertyAll(
-        TextStyle(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ),
-    cardTheme: CardTheme(
-      color: colorScheme.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      ),
-    ),
-  );
 }
 
 class LottoHomeShell extends StatefulWidget {
