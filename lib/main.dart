@@ -10,11 +10,15 @@ import 'screens/compare_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/daily_screen.dart';
 import 'screens/dream_screen.dart';
+import 'screens/fortune_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/lucky_store_screen.dart';
 import 'screens/my_tickets_screen.dart';
 import 'screens/premium_screen.dart';
 import 'screens/recommend_screen.dart';
+import 'screens/currency_screen.dart';
+import 'screens/simulation_screen.dart';
 import 'screens/scan_screen.dart';
 import 'services/ad_service.dart';
 import 'services/notification_service.dart';
@@ -51,6 +55,10 @@ class LottoMasterApp extends StatelessWidget {
         DreamScreen.routeName: (_) => const DreamScreen(),
         AIRecommendScreen.routeName: (_) => const AIRecommendScreen(),
         DailyScreen.routeName: (_) => const DailyScreen(),
+        FortuneScreen.routeName: (_) => const FortuneScreen(),
+        CurrencyScreen.routeName: (_) => const CurrencyScreen(),
+        SimulationScreen.routeName: (_) => const SimulationScreen(),
+        LuckyStoreScreen.routeName: (_) => const LuckyStoreScreen(),
       },
       home: const LottoHomeShell(),
     );

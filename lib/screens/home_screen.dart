@@ -1,11 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/lotto_result.dart';
 import '../providers/user_provider.dart';
 import '../screens/compare_screen.dart';
 import '../screens/dream_screen.dart';
+import '../screens/fortune_screen.dart';
+import '../screens/lucky_store_screen.dart';
 import '../screens/premium_screen.dart';
+import '../screens/currency_screen.dart';
+import '../screens/simulation_screen.dart';
 import '../services/ad_service.dart';
+import '../services/holiday_service.dart';
+import '../services/fortune_service.dart';
 import '../services/lotto_api.dart';
 import '../services/notification_service.dart';
 import '../widgets/lotto_widgets.dart';
@@ -19,15 +27,38 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final LottoApi _lottoApi = LottoApi();
+  final FortuneService _fortuneService = const FortuneService();
+  final HolidayService _holidayService = HolidayService();
   List<LottoResult> _results = [];
   DateTime? _lastUpdated;
   bool _loading = true;
   String? _errorMessage;
+  FortuneResult? _fortune;
+  List<int> _dailyLuckyNumbers = [];
+  Timer? _ddayTimer;
+  Duration _dday = Duration.zero;
+  late DateTime _nextDraw;
+  Holiday? _nextHoliday;
 
   @override
   void initState() {
     super.initState();
+    _nextDraw = NotificationService.instance.nextDrawTime();
+    _fortune = _fortuneService.generateFortune(
+      birthday: DateTime.now().subtract(const Duration(days: 12000)),
+      byZodiac: true,
+    );
+    _dailyLuckyNumbers = _fortune?.luckyNumbers ?? [3, 12, 18, 24, 33, 41];
+    _loadHoliday();
+    _updateCountdown();
+    _ddayTimer = Timer.periodic(const Duration(minutes: 1), (_) => _updateCountdown());
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _ddayTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -44,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _results = results;
         _lastUpdated = DateTime.now();
         _loading = false;
+        _dailyLuckyNumbers = _topNumbers();
       });
     } catch (error) {
       if (!mounted) {
@@ -54,6 +86,52 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     }
+  }
+
+  void _updateCountdown() {
+    final now = DateTime.now();
+    final diff = _nextDraw.difference(now);
+    setState(() {
+      _dday = diff.isNegative ? Duration.zero : diff;
+    });
+  }
+
+  Future<void> _loadHoliday() async {
+    final now = DateTime.now();
+    final holidays = await _holidayService.fetchHolidays(year: now.year, month: now.month);
+    final upcoming = holidays
+        .where((h) => !h.date.isBefore(DateTime(now.year, now.month, now.day)))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    if (upcoming.isNotEmpty) {
+      setState(() {
+        _nextHoliday = upcoming.first;
+      });
+      return;
+    }
+    final nextMonth = now.add(const Duration(days: 32));
+    final nextList = await _holidayService.fetchHolidays(year: nextMonth.year, month: nextMonth.month);
+    final sorted = List<Holiday>.from(nextList)..sort((a, b) => a.date.compareTo(b.date));
+    if (sorted.isNotEmpty) {
+      setState(() {
+        _nextHoliday = sorted.first;
+      });
+    }
+  }
+
+  List<int> _topNumbers() {
+    final counts = <int, int>{};
+    for (final result in _results) {
+      for (final number in result.numbers) {
+        counts[number] = (counts[number] ?? 0) + 1;
+      }
+    }
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (sorted.length >= 6) {
+      return sorted.take(6).map((e) => e.key).toList();
+    }
+    return _dailyLuckyNumbers.isNotEmpty ? _dailyLuckyNumbers : [3, 9, 17, 24, 33, 41];
   }
 
   @override
@@ -84,6 +162,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                     child: _QuickActions(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: _HomeInsights(
+                      dday: _dday,
+                      nextDraw: _nextDraw,
+                      fortune: _fortune,
+                      luckyNumbers: _dailyLuckyNumbers,
+                      nextHoliday: _nextHoliday,
+                      onOpenFortune: () => Navigator.pushNamed(context, FortuneScreen.routeName),
+                      onOpenCurrency: () => Navigator.pushNamed(context, CurrencyScreen.routeName),
+                    ),
                   ),
                 ),
                 SliverToBoxAdapter(
@@ -428,26 +520,56 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionCard(
-            title: '당첨 비교',
-            subtitle: '내 티켓과 결과 매칭',
-            icon: Icons.compare_arrows_rounded,
-            onTap: () => Navigator.pushNamed(context, CompareScreen.routeName),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ActionCard(
-            title: '꿈 해몽',
-            subtitle: '키워드별 행운 번호',
-            icon: Icons.auto_stories_rounded,
-            onTap: () => Navigator.pushNamed(context, DreamScreen.routeName),
-          ),
-        ),
-      ],
+    final items = [
+      _ActionCard(
+        title: '당첨 비교',
+        subtitle: '내 티켓과 결과 매칭',
+        icon: Icons.compare_arrows_rounded,
+        onTap: () => Navigator.pushNamed(context, CompareScreen.routeName),
+      ),
+      _ActionCard(
+        title: '꿈 해몽',
+        subtitle: '키워드별 행운 번호',
+        icon: Icons.auto_stories_rounded,
+        onTap: () => Navigator.pushNamed(context, DreamScreen.routeName),
+      ),
+      _ActionCard(
+        title: '환율 계산',
+        subtitle: '당첨금 달러/엔/유로',
+        icon: Icons.currency_exchange_rounded,
+        onTap: () => Navigator.pushNamed(context, CurrencyScreen.routeName),
+      ),
+      _ActionCard(
+        title: '행운 판매점',
+        subtitle: '명당 지도 보기',
+        icon: Icons.map_rounded,
+        onTap: () => Navigator.pushNamed(context, LuckyStoreScreen.routeName),
+      ),
+      _ActionCard(
+        title: '운세',
+        subtitle: '띠·별자리·행운 번호',
+        icon: Icons.auto_awesome_rounded,
+        onTap: () => Navigator.pushNamed(context, FortuneScreen.routeName),
+      ),
+      _ActionCard(
+        title: '시뮬레이션',
+        subtitle: '당첨금 사용 플랜',
+        icon: Icons.savings_rounded,
+        onTap: () => Navigator.pushNamed(context, SimulationScreen.routeName),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: items
+              .map((item) => SizedBox(width: width, child: item))
+              .toList(growable: false),
+        );
+      },
     );
   }
 }
@@ -509,6 +631,172 @@ class _ActionCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _HomeInsights extends StatelessWidget {
+  const _HomeInsights({
+    required this.dday,
+    required this.nextDraw,
+    required this.fortune,
+    required this.luckyNumbers,
+    required this.nextHoliday,
+    required this.onOpenFortune,
+    required this.onOpenCurrency,
+  });
+
+  final Duration dday;
+  final DateTime nextDraw;
+  final FortuneResult? fortune;
+  final List<int> luckyNumbers;
+  final Holiday? nextHoliday;
+  final VoidCallback onOpenFortune;
+  final VoidCallback onOpenCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final remainingDays = dday.inDays;
+    final hours = dday.inHours % 24;
+    final minutes = dday.inMinutes % 60;
+    final ddayLabel = remainingDays <= 0 && hours <= 0 && minutes <= 0
+        ? '오늘 추첨'
+        : 'D-${remainingDays} · ${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')} 남음';
+
+    return Column(
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.timer_rounded, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('다음 추첨까지', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(ddayLabel, style: Theme.of(context).textTheme.bodyMedium),
+                    if (nextHoliday != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '가장 가까운 공휴일: ${_formatDate(nextHoliday!.date)} ${nextHoliday!.name}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: scheme.onSurface.withOpacity(0.65)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Text(
+                _formatDate(nextDraw),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurface.withOpacity(0.6)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.auto_awesome_rounded, color: scheme.secondary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('오늘의 운세', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(
+                      fortune?.message ?? '행운 가득한 하루가 될 거예요.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onOpenFortune,
+                icon: const Icon(Icons.chevron_right_rounded),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.numbers_rounded, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('추천 번호 요약', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: luckyNumbers
+                          .map((n) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: scheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(n.toString().padLeft(2, '0'),
+                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+                              ))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onOpenCurrency,
+                icon: const Icon(Icons.attach_money_rounded),
+                tooltip: '환산 보기',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime time) {
+    return '${time.month.toString().padLeft(2, '0')}/${time.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }
 
