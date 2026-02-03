@@ -1,10 +1,10 @@
-name: Build APK
+name: Build Android App Bundle
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -29,11 +29,11 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Build APK
-      run: flutter build apk --release
+    - name: Build App Bundle
+      run: flutter build appbundle --release --build-number=$GITHUB_RUN_NUMBER
     
-    - name: Upload APK
+    - name: Upload App Bundle
       uses: actions/upload-artifact@v4
       with:
-        name: lotto-master-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: lotto-master-aab
+        path: build/app/outputs/bundle/release/app-release.aab

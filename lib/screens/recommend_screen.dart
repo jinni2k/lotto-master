@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/lotto_result.dart';
 import '../providers/user_provider.dart';
+import '../screens/ai_recommend_screen.dart';
 import '../screens/premium_screen.dart';
 import '../services/ad_service.dart';
 import '../services/lotto_api.dart';
@@ -56,6 +57,8 @@ class _RecommendScreenState extends State<RecommendScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 _ScreenHeader(onRefresh: _refresh),
+                const SizedBox(height: 16),
+                const _AIIntroCard(),
                 const SizedBox(height: 16),
                 _RecommendationCard(numbers: recommendation),
                 const SizedBox(height: 16),
@@ -207,6 +210,57 @@ class _RecommendationCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.black54,
                 ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AIIntroCard extends StatelessWidget {
+  const _AIIntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'AI 진화 추천',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '패턴 학습과 성과 추적을 반영한 맞춤 추천을 확인해보세요.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black54,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, AIRecommendScreen.routeName);
+              },
+              icon: const Icon(Icons.auto_awesome_rounded),
+              label: const Text('AI 추천 보기'),
+            ),
           ),
         ],
       ),
