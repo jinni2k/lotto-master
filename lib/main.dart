@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/analysis_screen.dart';
 import 'screens/history_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/recommend_screen.dart';
 
 void main() {
@@ -21,22 +22,23 @@ class LottoMasterApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF5F1E8),
       ),
-      home: const LottoHome(),
+      home: const LottoHomeShell(),
     );
   }
 }
 
-class LottoHome extends StatefulWidget {
-  const LottoHome({super.key});
+class LottoHomeShell extends StatefulWidget {
+  const LottoHomeShell({super.key});
 
   @override
-  State<LottoHome> createState() => _LottoHomeState();
+  State<LottoHomeShell> createState() => _LottoHomeShellState();
 }
 
-class _LottoHomeState extends State<LottoHome> {
+class _LottoHomeShellState extends State<LottoHomeShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
+  static const List<Widget> _screens = [
+    HomeScreen(),
     HistoryScreen(),
     AnalysisScreen(),
     RecommendScreen(),
@@ -49,21 +51,28 @@ class _LottoHomeState extends State<LottoHome> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: '최근',
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_rounded),
+            label: '홈',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
+          NavigationDestination(
+            icon: Icon(Icons.history_rounded),
+            label: '기록',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_rounded),
             label: '분석',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
+          NavigationDestination(
+            icon: Icon(Icons.auto_graph_rounded),
             label: '추천',
           ),
         ],
