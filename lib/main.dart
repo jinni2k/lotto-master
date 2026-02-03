@@ -1,10 +1,14 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'providers/user_provider.dart';
+import 'screens/ai_recommend_screen.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/compare_screen.dart';
+import 'screens/community_screen.dart';
+import 'screens/daily_screen.dart';
 import 'screens/dream_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
@@ -18,6 +22,7 @@ import 'services/purchase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   final userProvider = UserProvider();
   await AdService.instance.initialize();
   await PurchaseService.instance.initialize(userProvider);
@@ -44,6 +49,8 @@ class LottoMasterApp extends StatelessWidget {
         PremiumScreen.routeName: (_) => const PremiumScreen(),
         CompareScreen.routeName: (_) => const CompareScreen(),
         DreamScreen.routeName: (_) => const DreamScreen(),
+        AIRecommendScreen.routeName: (_) => const AIRecommendScreen(),
+        DailyScreen.routeName: (_) => const DailyScreen(),
       },
       home: const LottoHomeShell(),
     );
@@ -64,10 +71,14 @@ ThemeData _buildTheme(Brightness brightness) {
     onBackground: isDark ? const Color(0xFFE6ECF1) : const Color(0xFF1F2A34),
     error: const Color(0xFFEF5350),
     onError: Colors.white,
-    primaryContainer: isDark ? const Color(0xFF15324A) : const Color(0xFFD3E8FF),
-    onPrimaryContainer: isDark ? const Color(0xFFD6E9FF) : const Color(0xFF0D2D47),
-    secondaryContainer: isDark ? const Color(0xFF3B2A15) : const Color(0xFFFFE1C2),
-    onSecondaryContainer: isDark ? const Color(0xFFFFE6C7) : const Color(0xFF3B220F),
+    primaryContainer:
+        isDark ? const Color(0xFF15324A) : const Color(0xFFD3E8FF),
+    onPrimaryContainer:
+        isDark ? const Color(0xFFD6E9FF) : const Color(0xFF0D2D47),
+    secondaryContainer:
+        isDark ? const Color(0xFF3B2A15) : const Color(0xFFFFE1C2),
+    onSecondaryContainer:
+        isDark ? const Color(0xFFFFE6C7) : const Color(0xFF3B220F),
     outline: isDark ? const Color(0xFF2A3A4A) : const Color(0xFFD4C8BB),
     outlineVariant: isDark ? const Color(0xFF2A3A4A) : const Color(0xFFE2D7CB),
   );
@@ -120,17 +131,20 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
 
   static const List<Widget> _screens = [
     HomeScreen(),
+    DailyScreen(),
     ScanScreen(),
     MyTicketsScreen(),
     HistoryScreen(),
     AnalysisScreen(),
     RecommendScreen(),
+    CommunityScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _notificationSub = NotificationService.instance.notifications.listen((notification) {
+    _notificationSub =
+        NotificationService.instance.notifications.listen((notification) {
       if (!mounted) {
         return;
       }
@@ -168,6 +182,10 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
                 label: '홈',
               ),
               NavigationDestination(
+                icon: Icon(Icons.today_rounded),
+                label: '오늘',
+              ),
+              NavigationDestination(
                 icon: Icon(Icons.document_scanner_rounded),
                 label: '스캔',
               ),
@@ -186,6 +204,10 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
               NavigationDestination(
                 icon: Icon(Icons.auto_graph_rounded),
                 label: '추천',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.forum_rounded),
+                label: '커뮤니티',
               ),
             ],
           ),
@@ -210,7 +232,8 @@ class _LottoHomeShellState extends State<LottoHomeShell> {
 }
 
 class _NotificationBanner extends StatelessWidget {
-  const _NotificationBanner({required this.notification, required this.onClose});
+  const _NotificationBanner(
+      {required this.notification, required this.onClose});
 
   final DrawResultNotification notification;
   final VoidCallback onClose;
