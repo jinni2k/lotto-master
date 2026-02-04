@@ -28,11 +28,34 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  
+  // Firebase 초기화 (실패해도 앱 실행)
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init failed: $e');
+  }
+  
   final userProvider = UserProvider();
-  await AdService.instance.initialize();
-  await PurchaseService.instance.initialize(userProvider);
-  await NotificationService.instance.initialize();
+  
+  try {
+    await AdService.instance.initialize();
+  } catch (e) {
+    debugPrint('AdService init failed: $e');
+  }
+  
+  try {
+    await PurchaseService.instance.initialize(userProvider);
+  } catch (e) {
+    debugPrint('PurchaseService init failed: $e');
+  }
+  
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('NotificationService init failed: $e');
+  }
+  
   runApp(
     UserProviderScope(
       notifier: userProvider,
