@@ -354,7 +354,7 @@ class _PurchaseActions extends StatelessWidget {
           child: ElevatedButton(
             onPressed: product == null
                 ? null
-                : () => PurchaseService.instance.buyPremium(product),
+                : () => PurchaseService.instance.buyPremium(product!),
             child: const Text('프리미엄 시작하기'),
           ),
         ),
