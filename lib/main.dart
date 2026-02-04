@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'screens/result_screen.dart';
 
 void main() {
   runApp(const LottoMasterApp());
@@ -146,7 +147,10 @@ class _HomePageState extends State<HomePage> {
                       title: '당첨 결과',
                       subtitle: '최신 회차',
                       color: Colors.orange,
-                      onTap: () => _showComingSoon(context),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ResultScreen()),
+                      ),
                     ),
                     _MenuCard(
                       icon: Icons.analytics,
