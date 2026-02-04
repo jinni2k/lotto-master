@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:in_app_purchase/in_app_purchase.dart';
-
 import '../providers/user_provider.dart';
 import '../services/purchase_service.dart';
 

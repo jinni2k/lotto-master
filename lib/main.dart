@@ -20,33 +20,13 @@ import 'screens/currency_screen.dart';
 import 'screens/simulation_screen.dart';
 import 'screens/scan_screen.dart';
 import 'screens/splash_screen.dart';
-import 'services/ad_service.dart';
 import 'services/notification_service.dart';
-import 'services/purchase_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   final userProvider = UserProvider();
-  
-  try {
-    await AdService.instance.initialize();
-  } catch (e) {
-    debugPrint('AdService init failed: $e');
-  }
-  
-  try {
-    await PurchaseService.instance.initialize(userProvider);
-  } catch (e) {
-    debugPrint('PurchaseService init failed: $e');
-  }
-  
-  try {
-    await NotificationService.instance.initialize();
-  } catch (e) {
-    debugPrint('NotificationService init failed: $e');
-  }
   
   runApp(
     UserProviderScope(

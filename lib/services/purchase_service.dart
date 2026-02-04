@@ -1,18 +1,26 @@
 import 'dart:async';
 
-import 'package:in_app_purchase/in_app_purchase.dart';
-
 import '../providers/user_provider.dart';
+
+class ProductDetails {
+  final String id;
+  final String title;
+  final String description;
+  final String price;
+
+  ProductDetails({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.price,
+  });
+}
 
 class PurchaseService {
   PurchaseService._();
 
   static final PurchaseService instance = PurchaseService._();
 
-  static const Set<String> _productIds = {'premium_monthly'};
-
-  final InAppPurchase _inAppPurchase = InAppPurchase.instance;
-  StreamSubscription<List<PurchaseDetails>>? _subscription;
   List<ProductDetails> _products = [];
   bool _available = false;
 
@@ -20,54 +28,21 @@ class PurchaseService {
   bool get isAvailable => _available;
 
   Future<void> initialize(UserProvider userProvider) async {
-    _available = await _inAppPurchase.isAvailable();
-    if (!_available) {
-      return;
-    }
-    await loadProducts();
-    _subscription ??= _inAppPurchase.purchaseStream.listen(
-      (purchases) => _handlePurchases(purchases, userProvider),
-      onDone: () => _subscription?.cancel(),
-    );
+    // 인앱 결제 비활성화 (Play Store 설정 필요)
+    _available = false;
   }
 
   Future<List<ProductDetails>> loadProducts() async {
-    if (!_available) {
-      return _products;
-    }
-    final response = await _inAppPurchase.queryProductDetails(_productIds);
-    _products = response.productDetails;
     return _products;
   }
 
   Future<void> buyPremium(ProductDetails product) async {
-    final purchaseParam = PurchaseParam(productDetails: product);
-    await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+    // 비활성화
   }
 
   Future<void> restore() async {
-    await _inAppPurchase.restorePurchases();
+    // 비활성화
   }
 
-  void dispose() {
-    _subscription?.cancel();
-    _subscription = null;
-  }
-
-  Future<void> _handlePurchases(
-    List<PurchaseDetails> purchases,
-    UserProvider userProvider,
-  ) async {
-    var hasPremium = userProvider.isPremium;
-    for (final purchase in purchases) {
-      if (purchase.status == PurchaseStatus.purchased ||
-          purchase.status == PurchaseStatus.restored) {
-        hasPremium = true;
-      }
-      if (purchase.pendingCompletePurchase) {
-        await _inAppPurchase.completePurchase(purchase);
-      }
-    }
-    userProvider.setPremium(hasPremium);
-  }
+  void dispose() {}
 }
