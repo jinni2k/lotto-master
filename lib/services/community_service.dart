@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 
 import '../models/post.dart';
 
@@ -38,42 +39,96 @@ class CommunityService {
 
   static final CommunityService instance = CommunityService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  Database? _db;
+  final _postsController = StreamController<List<Post>>.broadcast();
+  final _chatController = StreamController<List<ChatMessage>>.broadcast();
+  String _currentUserId = 'local_user';
+  String _currentUserName = '로또마스터';
 
-  CollectionReference<Map<String, dynamic>> get _posts => _firestore.collection('posts');
-  CollectionReference<Map<String, dynamic>> get _chat => _firestore.collection('live_chat');
-
-  Future<User> _ensureSignedIn() async {
-    final current = _auth.currentUser;
-    if (current != null) {
-      return current;
-    }
-    final credential = await _auth.signInAnonymously();
-    return credential.user!;
+  Future<Database> get database async {
+    if (_db != null) return _db!;
+    _db = await _initDatabase();
+    return _db!;
   }
 
-  String _displayName(User user) {
-    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
-      return user.displayName!;
-    }
-    return '익명#${user.uid.substring(0, 4)}';
+  Future<Database> _initDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'community.db');
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE posts(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            category TEXT NOT NULL,
+            authorId TEXT NOT NULL,
+            authorName TEXT NOT NULL,
+            likeCount INTEGER DEFAULT 0,
+            commentCount INTEGER DEFAULT 0,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE comments(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            postId INTEGER NOT NULL,
+            authorId TEXT NOT NULL,
+            authorName TEXT NOT NULL,
+            content TEXT NOT NULL,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE chat_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            authorName TEXT NOT NULL,
+            message TEXT NOT NULL,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+      },
+    );
   }
 
   Stream<List<Post>> streamPosts({String? category}) {
-    Query<Map<String, dynamic>> query = _posts.orderBy('createdAt', descending: true);
+    _loadPosts(category: category);
+    return _postsController.stream;
+  }
+
+  Future<void> _loadPosts({String? category}) async {
+    final db = await database;
+    String query = 'SELECT * FROM posts ORDER BY createdAt DESC';
+    List<dynamic> args = [];
+    
     if (category != null && category.isNotEmpty) {
-      query = query.where('category', isEqualTo: category);
+      query = 'SELECT * FROM posts WHERE category = ? ORDER BY createdAt DESC';
+      args = [category];
     }
-    return query.snapshots().map(
-          (snapshot) => snapshot.docs.map(Post.fromFirestore).toList(growable: false),
-        );
+    
+    final maps = await db.rawQuery(query, args);
+    final posts = maps.map((map) => Post(
+      id: map['id'].toString(),
+      title: map['title'] as String,
+      content: map['content'] as String,
+      category: map['category'] as String,
+      authorId: map['authorId'] as String,
+      authorName: map['authorName'] as String,
+      likeCount: map['likeCount'] as int,
+      commentCount: map['commentCount'] as int,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    )).toList();
+    
+    _postsController.add(posts);
   }
 
   Stream<Post?> streamPost(String postId) {
-    return _posts.doc(postId).snapshots().map(
-          (snapshot) => snapshot.exists ? Post.fromFirestore(snapshot) : null,
-        );
+    return streamPosts().map((posts) => 
+      posts.where((p) => p.id == postId).firstOrNull
+    );
   }
 
   Future<void> createPost({
@@ -81,119 +136,97 @@ class CommunityService {
     required String content,
     required String category,
   }) async {
-    final user = await _ensureSignedIn();
-    final now = DateTime.now();
-    await _posts.add({
+    final db = await database;
+    await db.insert('posts', {
       'title': title,
       'content': content,
       'category': category,
-      'authorId': user.uid,
-      'authorName': _displayName(user),
+      'authorId': _currentUserId,
+      'authorName': _currentUserName,
       'likeCount': 0,
       'commentCount': 0,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'clientCreatedAt': now.toIso8601String(),
+      'createdAt': DateTime.now().toIso8601String(),
     });
+    _loadPosts();
   }
 
   Future<void> toggleLike(String postId) async {
-    final user = await _ensureSignedIn();
-    final postRef = _posts.doc(postId);
-    final likeRef = postRef.collection('likes').doc(user.uid);
-
-    await _firestore.runTransaction((transaction) async {
-      final likeSnapshot = await transaction.get(likeRef);
-      final postSnapshot = await transaction.get(postRef);
-      final currentLikes = postSnapshot.data()?['likeCount'] as int? ?? 0;
-
-      if (likeSnapshot.exists) {
-        transaction.delete(likeRef);
-        transaction.update(postRef, {
-          'likeCount': currentLikes > 0 ? currentLikes - 1 : 0,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        transaction.set(likeRef, {
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        transaction.update(postRef, {
-          'likeCount': currentLikes + 1,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-    });
+    final db = await database;
+    await db.rawUpdate(
+      'UPDATE posts SET likeCount = likeCount + 1 WHERE id = ?',
+      [int.parse(postId)],
+    );
+    _loadPosts();
   }
 
   Future<void> addComment(String postId, String content) async {
-    final user = await _ensureSignedIn();
-    final postRef = _posts.doc(postId);
-    await postRef.collection('comments').add({
-      'authorId': user.uid,
-      'authorName': _displayName(user),
+    final db = await database;
+    await db.insert('comments', {
+      'postId': int.parse(postId),
+      'authorId': _currentUserId,
+      'authorName': _currentUserName,
       'content': content,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': DateTime.now().toIso8601String(),
     });
-    await postRef.update({
-      'commentCount': FieldValue.increment(1),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await db.rawUpdate(
+      'UPDATE posts SET commentCount = commentCount + 1 WHERE id = ?',
+      [int.parse(postId)],
+    );
+    _loadPosts();
   }
 
   Stream<List<PostComment>> streamComments(String postId) {
-    return _posts
-        .doc(postId)
-        .collection('comments')
-        .orderBy('createdAt')
-        .snapshots()
-        .map(
-      (snapshot) {
-        return snapshot.docs
-            .map(
-              (doc) => PostComment(
-                id: doc.id,
-                authorId: doc['authorId'] as String? ?? '',
-                authorName: doc['authorName'] as String? ?? '익명',
-                content: doc['content'] as String? ?? '',
-                createdAt: (doc['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-              ),
-            )
-            .toList(growable: false);
-      },
+    final controller = StreamController<List<PostComment>>();
+    _loadComments(postId, controller);
+    return controller.stream;
+  }
+
+  Future<void> _loadComments(String postId, StreamController<List<PostComment>> controller) async {
+    final db = await database;
+    final maps = await db.query(
+      'comments',
+      where: 'postId = ?',
+      whereArgs: [int.parse(postId)],
+      orderBy: 'createdAt',
     );
+    final comments = maps.map((map) => PostComment(
+      id: map['id'].toString(),
+      authorId: map['authorId'] as String,
+      authorName: map['authorName'] as String,
+      content: map['content'] as String,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    )).toList();
+    controller.add(comments);
   }
 
   Future<void> reportPost(String postId, String reason) async {
-    final user = await _ensureSignedIn();
-    await _posts.doc(postId).collection('reports').add({
-      'authorId': user.uid,
-      'reason': reason,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    // 로컬에서는 리포트 기능 생략
   }
 
   Stream<List<ChatMessage>> streamChatMessages() {
-    return _chat.orderBy('createdAt').snapshots().map(
-          (snapshot) => snapshot.docs
-              .map(
-                (doc) => ChatMessage(
-                  id: doc.id,
-                  authorName: doc['authorName'] as String? ?? '익명',
-                  message: doc['message'] as String? ?? '',
-                  createdAt: (doc['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-                ),
-              )
-              .toList(growable: false),
-        );
+    _loadChatMessages();
+    return _chatController.stream;
+  }
+
+  Future<void> _loadChatMessages() async {
+    final db = await database;
+    final maps = await db.query('chat_messages', orderBy: 'createdAt');
+    final messages = maps.map((map) => ChatMessage(
+      id: map['id'].toString(),
+      authorName: map['authorName'] as String,
+      message: map['message'] as String,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    )).toList();
+    _chatController.add(messages);
   }
 
   Future<void> sendChatMessage(String message) async {
-    final user = await _ensureSignedIn();
-    await _chat.add({
-      'authorId': user.uid,
-      'authorName': _displayName(user),
+    final db = await database;
+    await db.insert('chat_messages', {
+      'authorName': _currentUserName,
       'message': message,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': DateTime.now().toIso8601String(),
     });
+    _loadChatMessages();
   }
 }

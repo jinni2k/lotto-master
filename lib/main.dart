@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'providers/user_provider.dart';
@@ -28,13 +27,6 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Firebase 초기화 (실패해도 앱 실행)
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint('Firebase init failed: $e');
-  }
   
   final userProvider = UserProvider();
   

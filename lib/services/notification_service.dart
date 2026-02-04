@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
-
 import '../models/lotto_result.dart';
 import '../models/my_ticket.dart';
 import 'ticket_storage.dart';
@@ -28,16 +26,7 @@ class NotificationService {
   Stream<DrawResultNotification> get notifications => _controller.stream;
 
   Future<void> initialize() async {
-    try {
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      await FirebaseMessaging.instance.subscribeToTopic('lotto_draw');
-      FirebaseMessaging.onMessage.listen(_handleMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
-    } catch (_) {}
+    // 로컬 알림만 사용 (Firebase 제거)
   }
 
   DateTime nextDrawTime({DateTime? now}) {
@@ -68,46 +57,6 @@ class NotificationService {
       title: '${result.drawNo}회차 결과 알림',
       message: stats,
       drawNo: result.drawNo,
-    );
-  }
-
-  Future<void> _handleMessage(RemoteMessage message) async {
-    final result = _parseResult(message);
-    if (result == null) {
-      return;
-    }
-    final notification = await compareTicketsWithResult(result);
-    if (notification == null) {
-      return;
-    }
-    _controller.add(notification);
-  }
-
-  LottoResult? _parseResult(RemoteMessage message) {
-    final data = message.data;
-    final numbersRaw = data['numbers'] as String?;
-    if (numbersRaw == null || numbersRaw.isEmpty) {
-      return null;
-    }
-    final numbers = numbersRaw
-        .split(',')
-        .map((value) => int.tryParse(value.trim()) ?? 0)
-        .where((value) => value > 0)
-        .toList(growable: false);
-    if (numbers.length != 6) {
-      return null;
-    }
-    final bonus = int.tryParse(data['bonus']?.toString() ?? '') ?? 0;
-    if (bonus == 0) {
-      return null;
-    }
-    final drawNo = int.tryParse(data['drawNo']?.toString() ?? '') ?? 0;
-    final drawDate = data['drawDate']?.toString() ?? '-';
-    return LottoResult(
-      drawNo: drawNo,
-      drawDate: drawDate,
-      numbers: numbers,
-      bonus: bonus,
     );
   }
 
